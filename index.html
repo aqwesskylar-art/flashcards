@@ -297,15 +297,15 @@ document.getElementById("card").addEventListener("touchend", e => {
 // --- Arrow buttons navigation ---
 function prevCard() {
   if(cards.length === 0) return;
+  flipped = false;        // <-- reset to front
   index = (index - 1 + cards.length) % cards.length;
-  flipped = false;
   render();
 }
 
 function nextCard() {
   if(cards.length === 0) return;
+  flipped = false;        // <-- reset to front
   index = (index + 1) % cards.length;
-  flipped = false;
   render();
 }
 
@@ -376,3 +376,4 @@ render();
 
 </body>
 </html>
+
