@@ -77,8 +77,8 @@
     <img id="image" src="" style="display:none;">
 </div>
 
-<button onclick="toggleAddForm()">Add Card</button>
-<button id="deleteButton" onclick="deleteCard()">Delete</button>
+<button type="button" onclick="toggleAddForm()">Add Card</button>
+<button type="button" id="deleteButton" onclick="deleteCard()">Delete</button>
 
 <div id="addCardForm">
     <h3>Add New Card</h3>
@@ -86,7 +86,7 @@
     <textarea id="frontTextInput" rows="3"></textarea>
     <label>Back (Image):</label>
     <input type="file" accept="image/*" id="backImageInput">
-    <button onclick="addCard()">Save Card</button>
+    <button type="button" onclick="addCard()">Save Card</button>
 </div>
 
 <!-- Supabase JS -->
@@ -111,8 +111,9 @@
         render();
     }
 
-    async function addCard() {
-        const frontText = document.getElementById("frontTextInput").value;
+    async function addCard(event) {
+        if (event) event.preventDefault();
+        const frontText = document.getElementById("frontTextInput").value.trim();
         const backFile = document.getElementById("backImageInput").files[0];
 
         if (!frontText || !backFile) {
@@ -126,7 +127,7 @@
                 .from('cards')
                 .insert([{ front: frontText, back: reader.result }])
                 .select();
-            if (error) { console.error(error); alert('Error adding card'); return; }
+            if (error) { console.error(error); alert("Error adding card"); return; }
             cards.push(data[0]);
             index = cards.length - 1;
             flipped = false;
