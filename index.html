@@ -27,6 +27,7 @@
             margin-bottom: 20px;
             padding: 20px;
             text-align: center;
+            transition: transform 0.25s;
         }
         img {
             max-width: 100%;
@@ -41,6 +42,9 @@
             background: #007bff;
             color: white;
             font-size: 16px;
+        }
+        #deleteButton {
+            background: #e74c3c;
         }
         #addCardForm {
             display: none;
@@ -69,10 +73,8 @@
     <img id="image" src="" style="display:none;">
 </div>
 
-<button onclick="flip()">Flip</button>
-<button onclick="prev()">Prev</button>
-<button onclick="next()">Next</button>
 <button onclick="toggleAddForm()">Add Card</button>
+<button id="deleteButton" onclick="deleteCard()">Delete</button>
 
 <!-- ADD CARD FORM -->
 <div id="addCardForm">
@@ -89,7 +91,6 @@
 
 <script>
     let cards = JSON.parse(localStorage.getItem("cards")) || [];
-
     let index = 0;
     let flipped = false;
 
@@ -103,6 +104,7 @@
 
         if (cards.length === 0) {
             textEl.innerText = "No cards yet. Add one!";
+            textEl.style.display = "block";
             imgEl.style.display = "none";
             return;
         }
@@ -110,23 +112,31 @@
         const card = cards[index];
 
         if (!flipped) {
-            // FRONT = TEXT
             textEl.innerText = card.front;
             textEl.style.display = "block";
-
             imgEl.style.display = "none";
         } else {
-            // BACK = IMAGE
             imgEl.src = card.back;
             imgEl.style.display = "block";
-
             textEl.style.display = "none";
         }
     }
 
-    function flip() { flipped = !flipped; render(); }
-    function next() { if (cards.length) { index = (index + 1) % cards.length; flipped = false; render(); } }
-    function prev() { if (cards.length) { index = (index - 1 + cards.length) % cards.length; flipped = false; render(); } }
+    function next() {
+        if (cards.length) {
+            index = (index + 1) % cards.length;
+            flipped = false;
+            render();
+        }
+    }
+
+    function prev() {
+        if (cards.length) {
+            index = (index - 1 + cards.length) % cards.length;
+            flipped = false;
+            render();
+        }
+    }
 
     function toggleAddForm() {
         const el = document.getElementById("addCardForm");
@@ -146,7 +156,7 @@
         reader.onload = function() {
             cards.push({
                 front: frontText,
-                back: reader.result   // base64 image
+                back: reader.result
             });
 
             saveCards();
@@ -154,7 +164,6 @@
             flipped = false;
             render();
 
-            // reset form
             document.getElementById("frontTextInput").value = "";
             document.getElementById("backImageInput").value = "";
             toggleAddForm();
@@ -162,6 +171,49 @@
 
         reader.readAsDataURL(backFile);
     }
+
+    function deleteCard() {
+        if (cards.length === 0) return;
+
+        const confirmed = confirm("Delete this card?");
+        if (!confirmed) return;
+
+        cards.splice(index, 1);
+
+        if (cards.length === 0) {
+            index = 0;
+        } else {
+            index = Math.min(index, cards.length - 1);
+        }
+
+        saveCards();
+        flipped = false;
+        render();
+    }
+
+    // --- TAP TO FLIP ---
+    document.getElementById("card").addEventListener("click", () => {
+        if (cards.length === 0) return;
+        flipped = !flipped;
+        render();
+    });
+
+    // --- SWIPE DETECTION ---
+    let startX = 0;
+
+    document.getElementById("card").addEventListener("touchstart", (e) => {
+        startX = e.touches[0].clientX;
+    });
+
+    document.getElementById("card").addEventListener("touchend", (e) => {
+        const endX = e.changedTouches[0].clientX;
+        const diff = endX - startX;
+
+        if (Math.abs(diff) > 50) {
+            if (diff < 0) next();   // swipe left
+            else prev();             // swipe right
+        }
+    });
 
     render();
 </script>
