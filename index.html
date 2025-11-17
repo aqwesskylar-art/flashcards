@@ -42,31 +42,71 @@
             color: white;
             font-size: 16px;
         }
+        #addCardForm {
+            display: none;
+            flex-direction: column;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        input, textarea {
+            margin: 8px 0;
+            padding: 10px;
+            width: 100%;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
     </style>
 </head>
 <body>
 
 <div id="card">
-    <img id="image" src="">
+    <img id="image" src="" />
     <p id="text"></p>
 </div>
 
 <button onclick="flip()">Flip</button>
 <button onclick="prev()">Prev</button>
 <button onclick="next()">Next</button>
+<button onclick="toggleAddForm()">Add Card</button>
+
+<!-- ADD CARD FORM -->
+<div id="addCardForm">
+    <h3>Add New Card</h3>
+
+    <label>Front (Image):</label>
+    <input type="file" accept="image/*" id="frontInput">
+
+    <label>Back (Text):</label>
+    <textarea id="backInput" rows="3"></textarea>
+
+    <button onclick="addCard()">Save Card</button>
+</div>
 
 <script>
-    // Change these to your cards
-    const cards = [
-        { front: "https://via.placeholder.com/300", back: "Example answer 1" },
-        { front: "https://via.placeholder.com/400", back: "Example answer 2" }
-    ];
+    // Load saved cards or start with empty array
+    let cards = JSON.parse(localStorage.getItem("cards")) || [];
 
     let index = 0;
     let flipped = false;
 
+    function saveCards() {
+        localStorage.setItem("cards", JSON.stringify(cards));
+    }
+
     function render() {
+        if (cards.length === 0) {
+            document.getElementById("image").style.display = "none";
+            document.getElementById("text").innerText = "No cards yet. Add one!";
+            return;
+        }
+
         const card = cards[index];
+
         if (!flipped) {
             document.getElementById("image").src = card.front;
             document.getElementById("image").style.display = "block";
@@ -78,8 +118,43 @@
     }
 
     function flip() { flipped = !flipped; render(); }
-    function next() { index = (index + 1) % cards.length; flipped = false; render(); }
-    function prev() { index = (index - 1 + cards.length) % cards.length; flipped = false; render(); }
+    function next() { if (cards.length) { index = (index + 1) % cards.length; flipped = false; render(); } }
+    function prev() { if (cards.length) { index = (index - 1 + cards.length) % cards.length; flipped = false; render(); } }
+
+    function toggleAddForm() {
+        const el = document.getElementById("addCardForm");
+        el.style.display = el.style.display === "flex" ? "none" : "flex";
+    }
+
+    function addCard() {
+        const frontFile = document.getElementById("frontInput").files[0];
+        const backText = document.getElementById("backInput").value;
+
+        if (!frontFile || !backText) {
+            alert("Please choose an image and write back text.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function() {
+            cards.push({
+                front: reader.result,  // base64 image
+                back: backText
+            });
+
+            saveCards();
+            index = cards.length - 1;
+            flipped = false;
+            render();
+
+            // Reset form
+            document.getElementById("frontInput").value = "";
+            document.getElementById("backInput").value = "";
+            toggleAddForm();
+        };
+
+        reader.readAsDataURL(frontFile);
+    }
 
     render();
 </script>
