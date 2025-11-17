@@ -3,24 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-
     <title>Flashcards</title>
-
     <style>
         body {
             margin: 0;
             padding: 0;
-            height: 100vh; /* use full iPhone screen */
+            height: 100vh;
             display: flex;
             flex-direction: column;
             background: #f5f5f5;
             font-family: sans-serif;
             align-items: center;
         }
-
         #card {
             width: 90%;
-            flex: 1; /* card expands to fill remaining space */
+            flex: 1;
             max-width: 500px;
             background: white;
             border-radius: 16px;
@@ -34,14 +31,13 @@
             padding: 20px;
             text-align: center;
             font-size: 24px;
+            transition: transform 0.25s;
         }
-
         #card img {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
         }
-
         button {
             padding: 14px 22px;
             margin: 6px;
@@ -50,6 +46,27 @@
             background: #007bff;
             color: white;
             font-size: 18px;
+        }
+        #deleteButton {
+            background: #e74c3c;
+        }
+        #addCardForm {
+            display: none;
+            flex-direction: column;
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-top: 20px;
+        }
+        input, textarea {
+            margin: 8px 0;
+            padding: 10px;
+            width: 100%;
+            border-radius: 6px;
+            border: 1px solid #ccc;
         }
     </style>
 </head>
@@ -63,146 +80,133 @@
 <button onclick="toggleAddForm()">Add Card</button>
 <button id="deleteButton" onclick="deleteCard()">Delete</button>
 
-<!-- ADD CARD FORM -->
 <div id="addCardForm">
     <h3>Add New Card</h3>
-
     <label>Front (Text):</label>
     <textarea id="frontTextInput" rows="3"></textarea>
-
     <label>Back (Image):</label>
     <input type="file" accept="image/*" id="backImageInput">
-
     <button onclick="addCard()">Save Card</button>
 </div>
 
-<script>
-    let cards = JSON.parse(localStorage.getItem("cards")) || [];
-    let index = 0;
-    let flipped = false;
+<script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-    function saveCards() {
-        localStorage.setItem("cards", JSON.stringify(cards));
+    const SUPABASE_URL = 'https://msyhqswhpfxtvwybfbwr.supabase.co'
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zeWhxc3docGZ4dHZ3eWJmYndyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzMzQwOTUsImV4cCI6MjA3ODkxMDA5NX0.QdOTDVeF9NLgS3BOGO_9yOEm585Y6p_tnVF2Lstns6c'
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+    let cards = []
+    let index = 0
+    let flipped = false
+
+    async function fetchCards() {
+        const { data, error } = await supabase
+            .from('cards')
+            .select('*')
+            .order('created_at', { ascending: true })
+        if (error) console.error(error)
+        else cards = data
+        render()
+    }
+
+    async function addCard() {
+        const frontText = document.getElementById("frontTextInput").value
+        const backFile = document.getElementById("backImageInput").files[0]
+
+        if (!frontText || !backFile) {
+            alert("Please write text and choose an image.")
+            return
+        }
+
+        const reader = new FileReader()
+        reader.onload = async function() {
+            const { data, error } = await supabase
+                .from('cards')
+                .insert([{ front: frontText, back: reader.result }])
+                .select()
+            if (error) { console.error(error); alert('Error adding card'); return }
+            cards.push(data[0])
+            index = cards.length - 1
+            flipped = false
+            render()
+            document.getElementById("frontTextInput").value = ""
+            document.getElementById("backImageInput").value = ""
+            toggleAddForm()
+        }
+        reader.readAsDataURL(backFile)
+    }
+
+    async function deleteCard() {
+        if (cards.length === 0) return
+        if (!confirm("Delete this card?")) return
+        const id = cards[index].id
+        const { error } = await supabase
+            .from('cards')
+            .delete()
+            .eq('id', id)
+        if (error) { console.error(error); alert('Error deleting card'); return }
+        cards.splice(index, 1)
+        if (cards.length === 0) index = 0
+        else index = Math.min(index, cards.length - 1)
+        flipped = false
+        render()
     }
 
     function render() {
-        const textEl = document.getElementById("text");
-        const imgEl = document.getElementById("image");
+        const textEl = document.getElementById("text")
+        const imgEl = document.getElementById("image")
 
         if (cards.length === 0) {
-            textEl.innerText = "No cards yet. Add one!";
-            textEl.style.display = "block";
-            imgEl.style.display = "none";
-            return;
+            textEl.innerText = "No cards yet. Add one!"
+            textEl.style.display = "block"
+            imgEl.style.display = "none"
+            return
         }
 
-        const card = cards[index];
-
+        const card = cards[index]
         if (!flipped) {
-            textEl.innerText = card.front;
-            textEl.style.display = "block";
-            imgEl.style.display = "none";
+            textEl.innerText = card.front
+            textEl.style.display = "block"
+            imgEl.style.display = "none"
         } else {
-            imgEl.src = card.back;
-            imgEl.style.display = "block";
-            textEl.style.display = "none";
-        }
-    }
-
-    function next() {
-        if (cards.length) {
-            index = (index + 1) % cards.length;
-            flipped = false;
-            render();
-        }
-    }
-
-    function prev() {
-        if (cards.length) {
-            index = (index - 1 + cards.length) % cards.length;
-            flipped = false;
-            render();
+            imgEl.src = card.back
+            imgEl.style.display = "block"
+            textEl.style.display = "none"
         }
     }
 
     function toggleAddForm() {
-        const el = document.getElementById("addCardForm");
-        el.style.display = el.style.display === "flex" ? "none" : "flex";
+        const el = document.getElementById("addCardForm")
+        el.style.display = el.style.display === "flex" ? "none" : "flex"
     }
 
-    function addCard() {
-        const frontText = document.getElementById("frontTextInput").value;
-        const backFile = document.getElementById("backImageInput").files[0];
-
-        if (!frontText || !backFile) {
-            alert("Please write text and choose an image.");
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = function() {
-            cards.push({
-                front: frontText,
-                back: reader.result
-            });
-
-            saveCards();
-            index = cards.length - 1;
-            flipped = false;
-            render();
-
-            document.getElementById("frontTextInput").value = "";
-            document.getElementById("backImageInput").value = "";
-            toggleAddForm();
-        };
-
-        reader.readAsDataURL(backFile);
-    }
-
-    function deleteCard() {
-        if (cards.length === 0) return;
-
-        const confirmed = confirm("Delete this card?");
-        if (!confirmed) return;
-
-        cards.splice(index, 1);
-
-        if (cards.length === 0) {
-            index = 0;
-        } else {
-            index = Math.min(index, cards.length - 1);
-        }
-
-        saveCards();
-        flipped = false;
-        render();
-    }
-
-    // --- TAP TO FLIP ---
+    // --- Tap to flip ---
     document.getElementById("card").addEventListener("click", () => {
-        if (cards.length === 0) return;
-        flipped = !flipped;
-        render();
-    });
+        if (cards.length === 0) return
+        flipped = !flipped
+        render()
+    })
 
-    // --- SWIPE DETECTION ---
-    let startX = 0;
-
-    document.getElementById("card").addEventListener("touchstart", (e) => {
-        startX = e.touches[0].clientX;
-    });
-
-    document.getElementById("card").addEventListener("touchend", (e) => {
-        const endX = e.changedTouches[0].clientX;
-        const diff = endX - startX;
-
+    // --- Swipe detection ---
+    let startX = 0
+    document.getElementById("card").addEventListener("touchstart", e => {
+        startX = e.touches[0].clientX
+    })
+    document.getElementById("card").addEventListener("touchend", e => {
+        const endX = e.changedTouches[0].clientX
+        const diff = endX - startX
         if (Math.abs(diff) > 50) {
-            if (diff < 0) next();   // swipe left
-            else prev();             // swipe right
+            if (diff < 0) index = (index + 1) % cards.length
+            else index = (index - 1 + cards.length) % cards.length
+            flipped = false
+            render()
         }
-    });
+    })
 
-    render();
+    // --- Initial fetch ---
+    fetchCards()
 </script>
 
 </body>
