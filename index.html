@@ -304,7 +304,7 @@ function prevCard() {
 
 function nextCard() {
   if(cards.length === 0) return;
-  flipped = false;        // <-- reset to front
+  flipped = true;        // <-- reset to front
   index = (index + 1) % cards.length;
   render();
 }
@@ -376,5 +376,6 @@ render();
 
 </body>
 </html>
+
 
 
