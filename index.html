@@ -65,8 +65,8 @@
 <body>
 
 <div id="card">
-    <img id="image" src="" />
     <p id="text"></p>
+    <img id="image" src="" style="display:none;">
 </div>
 
 <button onclick="flip()">Flip</button>
@@ -78,17 +78,16 @@
 <div id="addCardForm">
     <h3>Add New Card</h3>
 
-    <label>Front (Image):</label>
-    <input type="file" accept="image/*" id="frontInput">
+    <label>Front (Text):</label>
+    <textarea id="frontTextInput" rows="3"></textarea>
 
-    <label>Back (Text):</label>
-    <textarea id="backInput" rows="3"></textarea>
+    <label>Back (Image):</label>
+    <input type="file" accept="image/*" id="backImageInput">
 
     <button onclick="addCard()">Save Card</button>
 </div>
 
 <script>
-    // Load saved cards or start with empty array
     let cards = JSON.parse(localStorage.getItem("cards")) || [];
 
     let index = 0;
@@ -99,21 +98,29 @@
     }
 
     function render() {
+        const textEl = document.getElementById("text");
+        const imgEl = document.getElementById("image");
+
         if (cards.length === 0) {
-            document.getElementById("image").style.display = "none";
-            document.getElementById("text").innerText = "No cards yet. Add one!";
+            textEl.innerText = "No cards yet. Add one!";
+            imgEl.style.display = "none";
             return;
         }
 
         const card = cards[index];
 
         if (!flipped) {
-            document.getElementById("image").src = card.front;
-            document.getElementById("image").style.display = "block";
-            document.getElementById("text").innerText = "";
+            // FRONT = TEXT
+            textEl.innerText = card.front;
+            textEl.style.display = "block";
+
+            imgEl.style.display = "none";
         } else {
-            document.getElementById("image").style.display = "none";
-            document.getElementById("text").innerText = card.back;
+            // BACK = IMAGE
+            imgEl.src = card.back;
+            imgEl.style.display = "block";
+
+            textEl.style.display = "none";
         }
     }
 
@@ -127,19 +134,19 @@
     }
 
     function addCard() {
-        const frontFile = document.getElementById("frontInput").files[0];
-        const backText = document.getElementById("backInput").value;
+        const frontText = document.getElementById("frontTextInput").value;
+        const backFile = document.getElementById("backImageInput").files[0];
 
-        if (!frontFile || !backText) {
-            alert("Please choose an image and write back text.");
+        if (!frontText || !backFile) {
+            alert("Please write text and choose an image.");
             return;
         }
 
         const reader = new FileReader();
         reader.onload = function() {
             cards.push({
-                front: reader.result,  // base64 image
-                back: backText
+                front: frontText,
+                back: reader.result   // base64 image
             });
 
             saveCards();
@@ -147,13 +154,13 @@
             flipped = false;
             render();
 
-            // Reset form
-            document.getElementById("frontInput").value = "";
-            document.getElementById("backInput").value = "";
+            // reset form
+            document.getElementById("frontTextInput").value = "";
+            document.getElementById("backImageInput").value = "";
             toggleAddForm();
         };
 
-        reader.readAsDataURL(frontFile);
+        reader.readAsDataURL(backFile);
     }
 
     render();
