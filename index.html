@@ -80,7 +80,7 @@
 <button type="button" onclick="toggleAddForm()">Add Card</button>
 <button type="button" id="deleteButton" onclick="deleteCard()">Delete</button>
 <button type="button" onclick="exportCards()">Export Cards</button>
-<input type="file" id="importFile" style="display:none;" onchange="importCards(event)">
+<input type="file" id="importFile" style="display:none;" accept=".json" onchange="importCards(event)">
 <button type="button" onclick="document.getElementById('importFile').click()">Import Cards</button>
 
 <div id="addCardForm">
@@ -93,11 +93,22 @@
 </div>
 
 <script>
-let cards = [];
+// --- Preloaded cards ---
+let cards = [
+  {
+    front: "What is the capital of France?",
+    back: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA..."
+  },
+  {
+    front: "Who painted the Mona Lisa?",
+    back: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA..."
+  }
+];
+
 let index = 0;
 let flipped = false;
 
-// Render card
+// --- Render card ---
 function render() {
   const textEl = document.getElementById("text");
   const imgEl = document.getElementById("image");
@@ -121,7 +132,7 @@ function render() {
   }
 }
 
-// Add card
+// --- Add card ---
 function addCard() {
   const frontText = document.getElementById("frontTextInput").value.trim();
   const backFile = document.getElementById("backImageInput").files[0];
@@ -143,7 +154,7 @@ function addCard() {
   reader.readAsDataURL(backFile);
 }
 
-// Delete card
+// --- Delete card ---
 function deleteCard() {
   if(cards.length === 0) return;
   if(!confirm("Delete this card?")) return;
@@ -153,20 +164,20 @@ function deleteCard() {
   render();
 }
 
-// Toggle add card form
+// --- Toggle add card form ---
 function toggleAddForm() {
   const el = document.getElementById("addCardForm");
   el.style.display = el.style.display === "flex" ? "none" : "flex";
 }
 
-// Tap to flip
+// --- Tap to flip ---
 document.getElementById("card").addEventListener("click", () => {
   if(cards.length === 0) return;
   flipped = !flipped;
   render();
 });
 
-// Swipe navigation
+// --- Swipe navigation ---
 let startX = 0;
 document.getElementById("card").addEventListener("touchstart", e => { startX = e.touches[0].clientX; });
 document.getElementById("card").addEventListener("touchend", e => {
@@ -180,7 +191,7 @@ document.getElementById("card").addEventListener("touchend", e => {
   }
 });
 
-// Export cards to JSON
+// --- Export cards to JSON ---
 function exportCards() {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(cards));
   const dlAnchor = document.createElement('a');
@@ -189,9 +200,11 @@ function exportCards() {
   dlAnchor.click();
 }
 
-// Import cards from JSON
+// --- Import cards from JSON ---
 function importCards(event){
   const file = event.target.files[0];
+  if(!file) return;
+
   const reader = new FileReader();
   reader.onload = function(e){
     try{
@@ -201,6 +214,7 @@ function importCards(event){
         index = 0;
         flipped = false;
         render();
+        alert("Flashcard set loaded!");
       } else {
         alert("Invalid JSON file");
       }
@@ -211,7 +225,7 @@ function importCards(event){
   reader.readAsText(file);
 }
 
-// Initial render
+// --- Initial render ---
 render();
 </script>
 
